@@ -80,6 +80,7 @@ suite "NimLog":
         newEntry("test", Severity.TRACE, "trace 3.33 false")
       ]
 
+      check mem.getEntries().len == entries.len
       for (memEnt, ent) in zip(mem.getEntries(), entries):
         let baseTime = times.dateTime(2000, 1.Month, 1.MonthdayRange)
         var memEnt = memEnt
