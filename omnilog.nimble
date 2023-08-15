@@ -8,4 +8,4 @@ license       = "LGPL"
 srcDir        = "src"
 
 [Deps]
-Requires: "nim >= 0.12.0, values >= 0.1, pretty, diff"
+Requires: "nim >= 0.12.0, values >= 0.1"
