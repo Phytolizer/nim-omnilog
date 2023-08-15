@@ -9,7 +9,7 @@
 ##                                                                           ##
 ###############################################################################
 
-from ../../omnilog import Entry, Handler, Severity, newLogErr, Formatter
+from ../../omnilog import Entry, Handler, Severity, Formatter
 
 type MemoryHandler = ref object of Handler
   entries: seq[Entry]

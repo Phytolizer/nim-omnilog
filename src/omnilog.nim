@@ -19,16 +19,15 @@ from values import Map, newValueMap, `[]=`, `.=`, toValue
 
 
 ###########
-# LogErr. #
+# LogDefect. #
 ###########
 
-type LogErr* = object of Exception
-  discard
+type LogDefect* = object of Defect
 
-proc newLogErr*(msg: string): ref Exception =
-  newException(LogErr, msg)
+proc newLogDefect*(msg: string): ref Exception =
+  newException(LogDefect, msg)
 
-type 
+type
   Severity* {.pure.} = enum
     UNKNOWN
     EMERGENCY
@@ -48,7 +47,7 @@ type
     facility*: string
     severity*: Severity
     customSeverity*: string
-    time*: times.TimeInfo
+    time*: times.DateTime
     msg*: string
     fields*: Map
 
@@ -116,26 +115,22 @@ method write*(w: Handler, e: Entry) {.base.} =
   w.doWrite(eRef[])
 
 proc addFilter*(w: Handler, filter: proc(e: Entry): bool) =
-  if w.filters == nil:
-    w.filters = @[]
   w.filters.add(filter)
 
 proc clearFilters*(w: Handler) =
-  w.filters = nil
+  w.filters = @[]
 
 proc addFormatter*(w: Handler, formatter: Formatter) =
-  if w.formatters == nil:
-    w.formatters = @[]
   w.formatters.add(formatter)
 
 proc clearFormatters*(w: Handler) =
-  w.formatters = nil
+  w.formatters = @[]
 
 ###############################
 # Formatter / Handler imports. #
 ###############################
 
-import omnilog/formatters/defaultfields, omnilog/formatters/message
+import omnilog/formatters/message
 import omnilog/handlers/file
 
 
@@ -175,7 +170,12 @@ proc getHandlers(c: Config): seq[Handler] =
     result = c.parent.getHandlers()
 
 proc getFormatters(c: Config): seq[Formatter] =
-  if c.formatters != nil: c.formatters else: c.parent.getFormatters()
+  if c.formatters.len > 0:
+    c.formatters
+  elif c.parent != nil:
+    c.parent.getFormatters()
+  else:
+    @[]
 
 proc getCustomSeverities(c: Config): seq[string] =
   c.rootConfig.customSeverities
@@ -230,7 +230,7 @@ proc getHandler*(l: Logger, name: string): Handler =
   while not conf.hasHandlers:
     conf = conf.parent
   if not conf.handlers.hasKey(name):
-    raise newLogErr("Unknown handler: '" & name & "'")
+    raise newLogDefect("Unknown handler: '" & name & "'")
   conf.handlers[name]
 
 proc getHandlers*(l: Logger): seq[Handler] =
@@ -277,13 +277,13 @@ proc newRootLogger*(withDefaultHandler: bool = true): Logger =
 # newEntry(). #
 ###############
 
-proc newEntry*(facility: string, severity: Severity, msg: string, customSeverity: string = nil, fields: Map = nil): Entry =
+proc newEntry*(facility: string, severity: Severity, msg: string, customSeverity: string = "", fields: Map = nil): Entry =
   Entry(
     facility: facility,
     severity: severity,
     msg: msg,
-    time: times.getLocalTime(times.getTime()),
-    `fields`: fields
+    time: times.now(),
+    fields: fields
   )
 
 #########################
@@ -294,19 +294,18 @@ proc log*(l: Logger, e: Entry) =
   # Log arbitrary entries.
 
   if e.severity == Severity.UNKNOWN:
-    raise newLogErr("Can't log entries with severity: UNKNOWN")
+    raise newLogDefect("Can't log entries with severity: UNKNOWN")
 
   if e.severity > l.config.minSeverity:
     # Ignore severities which should not be logged.
     return
 
-  var eRef: ref Entry
-  new(eRef)
+  let eRef = new(Entry)
   eRef[] = e
 
   eRef[].facility = l.facility
 
-  if e.msg == nil:
+  if e.msg == "":
     eRef[].msg = ""
 
   for f in l.config.getFormatters:
@@ -327,7 +326,7 @@ proc log*(l: Logger, customSeverity: string, msg: string, args: varargs[string, 
   # Log a message with a custom severity.
   var msg = if msg == nil: "" else: msg
   if not (l.config.getCustomSeverities().contains(customSeverity)):
-    raise newLogErr("Unregistered custom severity: " & customSeverity)
+    raise newLogDefect("Unregistered custom severity: " & customSeverity)
   l.log(newEntry(l.facility, Severity.CUSTOM, msg.format(args), customSeverity = customSeverity))
 
 # Emergency.
@@ -415,7 +414,7 @@ proc log*(e: Entry, customSeverity: string, msg: string, args: varargs[string, `
   # Log a message with a custom severity.
 
   if not (e.logger.config.getCustomSeverities().contains(customSeverity)):
-    raise newLogErr("Unregistered custom severity: " & customSeverity)
+    raise newLogDefect("Unregistered custom severity: " & customSeverity)
   var msg = if msg == nil: "" else: msg
   var e = e
   e.severity = Severity.CUSTOM

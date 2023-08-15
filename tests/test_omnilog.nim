@@ -9,15 +9,16 @@
 ##                                                                           ##
 ###############################################################################
 
-import alpha, omega
-import ../omnilog, ../omnilog/handlers/memory
+import std/unittest
+import omnilog, omnilog/handlers/memory
+import sequtils, times
 
 
-Suite "NimLog":
+suite "NimLog":
   
-  Describe "Basic logging":
+  test "Basic logging":
 
-    Describe "Logger":
+    test "Logger":
       var l = newRootLogger(withDefaultHandler = false)
       l.setFacility("test")
       var mem = newMemoryHandler()
@@ -79,9 +80,10 @@ Suite "NimLog":
         newEntry("test", Severity.TRACE, "trace 3.33 false")
       ]
 
-      mem.getEntries().should equal entries
-
-
-  Describe "Global logger":
-    discard
-
+      for (memEnt, ent) in zip(mem.getEntries(), entries):
+        let baseTime = times.dateTime(2000, 1.Month, 1.MonthdayRange)
+        var memEnt = memEnt
+        memEnt.time = baseTime
+        var ent = ent
+        ent.time = baseTime
+        check memEnt == ent

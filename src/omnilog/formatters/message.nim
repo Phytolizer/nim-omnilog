@@ -13,7 +13,7 @@ from ../../omnilog import Formatter, Entry
 
 import values
 from strutils import contains, `%`, replace, endsWith
-from times import timeInfoToTime, getLocalTime, format
+from times import toTime, local, format
 
 type 
   Format* {.pure.} = enum
@@ -48,7 +48,7 @@ method format(f: MessageFormatter, e: ref Entry) =
   if msg.contains("$time"):
     msg = msg.replace("$time", e[].time.format("HH:mm:ss"))
 
-  if e[].fields == nil:
+  if e[].fields.isNil:
     msg = msg.replace("$fields", "").replace("$prettyFields", "")
   else:
     if msg.contains("$fields"):

@@ -9,7 +9,7 @@
 ##                                                                           ##
 ###############################################################################
 
-from ../../omnilog import Entry, Handler, Severity, newLogErr, Formatter
+from ../../omnilog import Entry, Handler, Severity, newLogDefect, Formatter
 from ../formatters/message import newMessageFormatter, Format
 
 from strutils import `%`
@@ -28,7 +28,7 @@ method doWrite*(w: FileHandler, e: Entry) =
     var mode = if w.append: fmAppend else: fmWrite
     if not w.file.open(w.filePath, mode):
       if w.mustWrite:
-        raise newLogErr("Could not open log file $1 for writing." % [w.filePath])
+        raise newLogDefect("Could not open log file $1 for writing." % [w.filePath])
       else:
         # mustWrite is not enabled, so ignore the open error.
         return
@@ -37,7 +37,7 @@ method doWrite*(w: FileHandler, e: Entry) =
     w.file.write(e.msg)
   except:
     if w.mustWrite:
-      raise newLogErr("Could not write to log file $1: $2" % [w.filePath, getCurrentExceptionMsg()])
+      raise newLogDefect("Could not write to log file $1: $2" % [w.filePath, getCurrentExceptionMsg()])
     else:
       # mustWrite not enabled, so ignore the error.
       return
@@ -53,23 +53,24 @@ method close*(w: FileHandler, force: bool = false, wait: bool = true) =
 
 proc newFileHandler*(
   file: File = nil,
-  path: string = nil, 
+  path: string = "", 
   minSeverity: Severity = Severity.CUSTOM, 
-  append, mustWrite: bool = true, 
+  append: bool = true,
+  mustWrite: bool = true, 
   flushAfter: int = 1, 
-  format: string = nil,
+  format: string = "",
   formatter: Formatter = nil
 ): FileHandler =
   
   var formatter = formatter
   if formatter == nil:
     var format = format
-    if format == nil:
+    if format == "":
       format = Format.DEFAULT.`$`
     formatter = newMessageFormatter(format)
 
   if file == nil and (path == nil or path == ""):
-    raise newLogErr("Must specify either file or filePath")
+    raise newLogDefect("Must specify either file or filePath")
 
   FileHandler(
     `file`: file,
